@@ -58,8 +58,27 @@ function batchCreate(bodies) {
   return calls
 }
 
+/* Обратите внимание на .flatMap и callback который он принимает. Идея довольна проста - мы заворачиваем Promise в конструктор потока чтобы получить поток с одним значением(или ошибкой. важно понимать что это именно значение, а не промис).
+ * .collect нам нужен для того чтобы собрать все значения в одной "точке" в массив.
+ * В результате это нам дает потоk потоков - при помоши flatMap мы сглаживаем это в один поток значений которым мы можем оперировать(кто сказал монада?).
+ * Теперь давайте попробуем реализовать наше требование:
+*/
+
+function batchCreate(bodies) {
+  const calls = H(bodies)
+    .flatMap(body =>
+      H(request
+        .post('localhost:3000/people')
+        .send(body)
+        .then(r => r.status)
+      )
+    )
+    .ratelimit(5, 1000)
+    .collect()
+    .toPromise(Promise)
+  return calls
+}
+
+/* Done - как мы видим при использовании даhного подхода наше требовния реализуеться очень декларативно и одной строчкой
+*/
 //https://www.g9labs.com/2016/03/21/lossless-rate-limiting-with-rxjs/
-
-const arr = Array.from(Array(20)).map((_, index) => ({name: index}))
-
-batchCreate(arr).then(console.log)
